@@ -13,10 +13,8 @@
     body {
       text-align: center;
     }
-    .main-card button {
-      position: relative;
-      left: -45px;
-      bottom: 15px;
+    .main-card{
+        width: 100%;
     }
     .favorites {
       list-style: none;
@@ -24,6 +22,30 @@
       justify-content: center;
       flex-wrap: wrap;
       gap: 15px;
+    }
+    .genBtn{
+        margin: 10px 0 10px 0;
+        padding: 10px;
+        width: 180px;
+        border-radius: 20px;
+        background: aliceblue;
+        border: solid 3px black;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    .divWrap{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .favoriteWrap{
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
     }
   </style>
   <body>
@@ -39,34 +61,41 @@
 
         const FormWrap = (props) => { 
             return (
-            <form onSubmit={(e) => {return false;}}>
-                <input type="text" placeholder="영어로 입력하세요." value={props.val} onChange={props.handleInputChange} />
-                <button type="button" onClick={props.handleGenBtnClick}>생성</button>
-                <p style={{color : 'red' , fontWeight : 'bold'}}>{props.errMsg}</p>
-            </form>
+                <button type="button" className="genBtn" onClick={props.handleGenBtnClick}>생성</button>
         )};
 
         const MainCardWrap = (props) =>  { 
-           
             return (
-            <div className="main-card">
-                <img src={props.imgSrc} style={{width:'450px' , height:'515px' , borderRadius:'30px'}} />
-                <button onClick = {props.handleHeartClick}>{props.heartIcon}</button>
-            </div>
+                <img src={props.imgSrc} style={{width:'400px' , height:'auto' , borderRadius:'30px' , height : '300px'}} />
+                
         )};
+
+        const LikeBtnWrap = (props) => {
+            return (<button onClick = {props.handleHeartClick}>{props.heartIcon}</button>);
+        }
+
         //파라미터 받아올때 중괄호로 바로 하위요소로도 접근가능
         const CatItem = ({imgSrc}) => (
-            <li>
+            <div>
                 <img src={imgSrc} style={{width: '150px' , height: '150px' , border : 'solid 2px black' , borderRadius : '20px'}} />
-            </li>
+            </div>
         );
 
         const FavoritesWrap = (props) => { 
-            return (
-            <ul className="favorites">
-                {props.favoriteCat.map((cat , i) => <CatItem key={i} imgSrc={cat}/>)}
-            </ul>
-        )};
+            if(props.favoriteCat.length > 0){
+                return (
+                    <div class="favoriteWrap">
+                        {props.favoriteCat.map((cat , i) => <CatItem key={i} imgSrc={cat}/>)}
+                    </div>
+                )
+            }else{
+                return (
+                    <div>
+                        <p>좋아요를 눌러보세요.</p>
+                    </div>
+                )
+            }
+        };
         
         const jsonLocalStorage = {
             setItem: (key, value) => {
@@ -77,31 +106,62 @@
             },
         };
 
+        const fnGetRamdomCatImg = async () => {
+            let imgSrc = "";
+            try {
+                const response = await fetch('https://api.thecatapi.com/v1/images/search');
+                const data = await response.json();
+                imgSrc = data[0].url;
+            } catch (error) {
+                console.log(error);
+            }
+            return imgSrc;
+        };
+
         const App = () => { 
-            const [cnt , setCnt] = React.useState(Number(localStorage.getItem('cnt')));
+            const [cnt , setCnt] = React.useState(Number(localStorage.getItem('cnt')) || 0 );
             const [catImgNo , setCatImgNo] = React.useState(0);
             const catImgArr = ["https://cataas.com/cat/HSENVDU4ZMqy7KQ0/says/react","https://cataas.com/cat/BxqL2EjFmtxDkAm2/says/inflearn","https://cataas.com/cat/18MD6byVC1yKGpXp/says/JavaScript"];
             const [favoriteCat , setFavoriteCat] = React.useState(jsonLocalStorage.getItem('favoriteCats') || []);
             const [val , setVal] = React.useState('');
             const [heartIcon , setHeartStatus] = React.useState("🤍");
             const [errMsg , setErrMsg] = React.useState("");
+            const [randomCatImgSrc , setRandomCatImgSrc] = React.useState("");
+
+            React.useEffect(() => {
+                const fetchCatImage = async () => {
+                    const imgSrc = await fnGetRamdomCatImg();
+                    setRandomCatImgSrc(imgSrc);
+                };
+                fetchCatImage();
+            }, []);
+
             const handleGenBtnClick = (e) => {
                 e.preventDefault();
                 if(val == '' || errMsg != ''){
                     setErrMsg("정확한 값을 입력해주세요.")
-                    return;
+                    //return;
                 }
                 setCnt(cnt + 1);
-                setCatImgNo(catImgNo + 1);
                 setHeartStatus("🤍");
                 jsonLocalStorage.setItem('cnt',cnt + 1);
-                if(catImgNo > 1) setCatImgNo(0);
+                setCatImgNo(catImgNo + 1);
+                const fetchCatImage = async () => {
+                    const imgSrc = await fnGetRamdomCatImg();
+                    setRandomCatImgSrc(imgSrc);
+                };
+                fetchCatImage();
             };
             const handleHeartClick = (imgSrc) => {
-                //alert("좋아요 클릭됨");
-                setHeartStatus("💖");
-                setFavoriteCat([...favoriteCat , imgSrc]);
-                jsonLocalStorage.setItem('favoriteCats',[...favoriteCat , imgSrc]);
+                if(favoriteCat.includes(imgSrc)){
+                    setHeartStatus("🤍");
+                    setFavoriteCat(favoriteCat.filter(cat => cat !== imgSrc));
+                    jsonLocalStorage.setItem('favoriteCats',favoriteCat.filter(cat => cat !== imgSrc));
+                }else{
+                    setHeartStatus("💖");
+                    setFavoriteCat([...favoriteCat , imgSrc]);
+                    jsonLocalStorage.setItem('favoriteCats',[...favoriteCat , imgSrc]);
+                }
             }
             const handleInputChange = (e) => {
                 e.preventDefault();
@@ -116,15 +176,17 @@
             }
 
             return (
-            <div>
+            <div className="divWrap">
                 <TitleWrap>네코네코니 No {cnt}</TitleWrap>
-                <FormWrap val={val} handleGenBtnClick={handleGenBtnClick} handleInputChange={handleInputChange} errMsg={errMsg}/>
-                <MainCardWrap handleHeartClick={() => handleHeartClick(catImgArr[catImgNo])} imgSrc={catImgArr[catImgNo]} heartIcon={heartIcon} />
+                <FormWrap val={val} handleGenBtnClick={handleGenBtnClick} />
+                <MainCardWrap  imgSrc={randomCatImgSrc} />
+                <LikeBtnWrap handleHeartClick={() => handleHeartClick(randomCatImgSrc)} heartIcon={heartIcon} />
                 <FavoritesWrap favoriteCat={favoriteCat} />
             </div>
         )};
 
-        ReactDOM.render(<App /> , document.querySelector("#resultWrap"));
+        const render = ReactDOM.createRoot(document.getElementById("resultWrap"))
+        render.render(<App />);
 
 
     </script>
